@@ -1,50 +1,48 @@
-﻿using FitLife2.Database;
 using FitLife2.Models;
-using Microsoft.Data.Sqlite;
+using FitLife2.Repository;
 
-namespace FitLife2.Repository
+namespace FitLife2.Services
 {
-    public class MiembroRepository
+    public class MiembroService
     {
-        private readonly DatabaseConfig _dbConfig;
+        private readonly MiembroRepository _repository;
 
-        public MiembroRepository(DatabaseConfig dbConfig)
+        public MiembroService(MiembroRepository repository)
         {
-            _dbConfig = dbConfig;
+            _repository = repository;
         }
 
-        public void Add(Miembro miembro)
+        public void Registrar(string nombre, string cedula, string tel)
         {
-            using var connection = _dbConfig.GetConnection();
-            connection.Open();
-            var command = connection.CreateCommand();
-            command.CommandText = "INSERT INTO Miembro (nombre_completo, cedula, telefono) VALUES ($nombre, $cedula, $tel)";
-            command.Parameters.AddWithValue("$nombre", miembro.NombreCompleto);
-            command.Parameters.AddWithValue("$cedula", miembro.Cedula);
-            command.Parameters.AddWithValue("$tel", miembro.Telefono);
-            command.ExecuteNonQuery();
+            _repository.Add(new Miembro { NombreCompleto = nombre, Cedula = cedula, Telefono = tel });
         }
 
-        public List<Miembro> GetAll()
-        {
-            var lista = new List<Miembro>();
-            using var connection = _dbConfig.GetConnection();
-            connection.Open();
-            var command = connection.CreateCommand();
-            command.CommandText = "SELECT id, nombre_completo, cedula, telefono FROM Miembro";
+        public List<Miembro> ObtenerTodos() => _repository.GetAll();
 
-            using var reader = command.ExecuteReader();
-            while (reader.Read())
+        // --- ESTOS SON LOS QUE FALTABAN ---
+
+        public Miembro BuscarPorCedula(string cedula)
+        {
+            return _repository.GetAll().FirstOrDefault(m => m.Cedula == cedula);
+        }
+
+        public void ActualizarTelefono(string cedula, string nuevoTel)
+        {
+            var miembro = BuscarPorCedula(cedula);
+            if (miembro != null)
             {
-                lista.Add(new Miembro
-                {
-                    Id = reader.GetInt32(0),
-                    NombreCompleto = reader.GetString(1),
-                    Cedula = reader.GetString(2),
-                    Telefono = reader.GetString(3)
-                });
+                miembro.Telefono = nuevoTel;
+                _repository.Update(miembro); 
             }
-            return lista;
+        }
+
+        public void Eliminar(string cedula)
+        {
+            var miembro = BuscarPorCedula(cedula);
+            if (miembro != null)
+            {
+                _repository.Delete(miembro.Id); 
+            }
         }
     }
 }
